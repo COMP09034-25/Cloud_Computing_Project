@@ -1,0 +1,55 @@
+name: Deploy to ECS
+
+on:
+  workflow_run:
+    workflows: ["Build and Push to ECR"]
+    types: [completed]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
+  AWS_ACCOUNT_ID: "339712863414"
+  ECR_REPOSITORY: catalog-service-ci
+
+  ECS_CLUSTER: catalog-1
+  ECS_SERVICE: task-1-service-jxbr2jgf
+  TASK_DEFINITION_FILE: ecs-task-def.json
+  CONTAINER_NAME: catalog
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::339712863414:role/Github_actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set IMAGE_URI (use latest)
+        run: |
+          echo "IMAGE_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest" >> $GITHUB_ENV
+
+      - name: Render ECS task definition (inject IMAGE_URI)
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.TASK_DEFINITION_FILE }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ env.IMAGE_URI }}
+
+      - name: Deploy ECS task definition (update service)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          wait-for-service-stability: true
