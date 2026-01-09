@@ -2,61 +2,48 @@ name: Deploy to Elastic Beanstalk
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 permissions:
   id-token: write
   contents: read
-
-env:
-  AWS_REGION: eu-west-1
-  EB_APPLICATION_NAME: catalogservice
-  EB_ENVIRONMENT_NAME: Catalogservice-env
-
-  # S3 bucket used by Elastic Beanstalk to store app versions
-  # Create one bucket once (unique name) and put it here:
-  S3_BUCKET: YOUR_UNIQUE_EB_BUCKET_NAME
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # Login to AWS using OIDC role (the role you already created)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::339712863414:role/Github_actions
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: eu-west-1
 
-      # Create deploy bundle
-      # IMPORTANT:
-      # For Docker EB, you typically deploy Dockerrun.aws.json (+ .ebextensions if any).
-      - name: Create EB bundle
+      - name: Zip Dockerrun
         run: |
-          test -f Dockerrun.aws.json || (echo "Dockerrun.aws.json not found in repo root" && exit 1)
-          zip -r deploy.zip Dockerrun.aws.json .ebextensions || zip -r deploy.zip Dockerrun.aws.json
+          zip -r deploy.zip Dockerrun.aws.json
 
-      - name: Upload bundle to S3
+      - name: Upload to S3
         run: |
-          S3_KEY="catalogservice/${GITHUB_SHA}.zip"
+          S3_BUCKET="elasticbeanstalk-eu-west-1-339712863414"
+          S3_KEY="catalogservice/deploy-${{ github.sha }}.zip"
           aws s3 cp deploy.zip "s3://${S3_BUCKET}/${S3_KEY}"
-          echo "S3_KEY=$S3_KEY" >> $GITHUB_ENV
+          echo "S3_BUCKET=${S3_BUCKET}" >> $GITHUB_ENV
+          echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
 
-      - name: Create Elastic Beanstalk application version
+      - name: Create EB version
         run: |
           aws elasticbeanstalk create-application-version \
-            --application-name "${EB_APPLICATION_NAME}" \
-            --version-label "${GITHUB_SHA}" \
-            --source-bundle S3Bucket="${S3_BUCKET}",S3Key="${S3_KEY}" \
-            --region "${AWS_REGION}"
+            --application-name "catalogservice" \
+            --version-label "v-${{ github.run_number }}" \
+            --source-bundle S3Bucket=${{ env.S3_BUCKET }},S3Key=${{ env.S3_KEY }}
 
-      - name: Deploy to Elastic Beanstalk environment
+      - name: Deploy to EB
         run: |
           aws elasticbeanstalk update-environment \
-            --environment-name "${EB_ENVIRONMENT_NAME}" \
-            --version-label "${GITHUB_SHA}" \
-            --region "${AWS_REGION}"
+            --environment-name "Catalogservice-env" \
+            --version-label "v-${{ github.run_number }}"
