@@ -1,5 +1,5 @@
 {
-  "AWSEBDockerrunVersion": 1,
+  "version": 1,
   "Image": {
     "Name": "339712863414.dkr.ecr.eu-west-1.amazonaws.com/catalog-service-ci:latest",
     "Update": "true"
