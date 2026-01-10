@@ -45,5 +45,5 @@ jobs:
       - name: Deploy to EB
         run: |
           aws elasticbeanstalk update-environment \
-            --environment-name "Catalogservice-env" \
+            --environment-name "Catalogservice-env-1" \
             --version-label "v-${{ github.run_number }}"
