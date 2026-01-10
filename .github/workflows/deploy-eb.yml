@@ -23,9 +23,26 @@ jobs:
           role-to-assume: arn:aws:iam::339712863414:role/Github_actions
           aws-region: eu-west-1
 
-      - name: Zip Dockerrun
+      - name: Validate Dockerrun + Zip
         run: |
+          set -euo pipefail
+          ls -la
+          # ensure exact casing and file exists at repo root
+          test -f Dockerrun.aws.json
+
+          echo "---- Dockerrun.aws.json ----"
+          cat Dockerrun.aws.json
+          echo "----------------------------"
+
+          # simple validation: must contain AWSEBDockerrunVersion
+          grep -q '"AWSEBDockerrunVersion"' Dockerrun.aws.json
+
           zip -r deploy.zip Dockerrun.aws.json
+
+          echo "---- ZIP CONTENTS ----"
+          unzip -l deploy.zip
+          echo "----------------------"
+
 
       - name: Upload to S3
         run: |
