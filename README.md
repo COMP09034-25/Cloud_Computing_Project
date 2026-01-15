@@ -125,7 +125,7 @@ The CI/CD pipeline can be triggered by pushing changes to the repository:
 ```bash
 git commit -am "Trigger CI/CD deployment"
 git push origin main
-
+```
 
 This action initiates the complete automated build and deployment process.
 
