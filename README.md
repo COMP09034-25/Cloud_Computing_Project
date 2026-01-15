@@ -52,7 +52,7 @@ The CI/CD configuration is defined under:
 ├── deploy-eb.yml         # Deploys the Docker image to AWS Elastic Beanstalk using Dockerrun.aws.json
 └── deploy-ecs.yml        # Deploys the Docker image to Amazon ECS (Fargate) using the ECS task definition
 
-```text
+```
 ---
 
 ## CI/CD Workflow Descriptions
